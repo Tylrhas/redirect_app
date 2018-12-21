@@ -1,30 +1,65 @@
 const app = require('../../app/lib/index')
 const request = require('supertest')
+const Honeybadger = require('honeybadger')
+
+Honeybadger.notify = jest.fn()
 
 describe('GET wildcard.com', () => {
 	test('host is equal to root domain', async () => {
-		var response = await request(app)
+		await request(app)
 			.get('/wildcard/test/subdir')
 			.set('Host', 'wildcard.com')
-		expect(response.statusCode).toBe(301)
+			.set('Protocol', 'https')
+			.expect(301)
 	})
 })
 
-describe('GET wildcard.com', () => {
+describe('GET www.wildcard.com', () => {
 	test('no redirect configured', async () => {
-		var response = await request(app)
+		await request(app)
 			.get('/')
 			.set('Host', 'www.wildcard.com')
-		expect(response.text).toBe('Redirects are not configured for this subdomain')
+			.set('Protocol', 'https')
+			.expect(404)
+	})
+})
+
+describe('GET subdomain.test.com', () => {
+	test('Redirect Loop', async () => {
+		await request(app)
+			.get('/')
+			.set('Host', 'subdomain.test.com')
+			.set('Protocol', 'https')
+			.expect(301)
 	})
 })
 
 describe('GET loop.com', () => {
 	test('Redirect Loop', async () => {
-		var response = await request(app)
+		await request(app)
 			.get('/')
 			.set('Host', 'loop.com')
-			.set('Protocol', 'http')
-		expect(response.text).toBe('loop.com is incorrectly configured creating a redirect loop')
+			.set('Protocol', 'https')
+			.expect(404)
+	})
+})
+
+describe('GET test.com', () => {
+	test('Redirect Loop', async () => {
+		await request(app)
+			.get('/wildcard/subdir/test/')
+			.set('Host', 'test.com')
+			.set('Protocol', 'https')
+			.expect(301)
+	})
+})
+
+describe('GET test.com', () => {
+	test('Nothing Found', async () => {
+		await request(app)
+			.get('/test/subdir/test/')
+			.set('Host', 'test.com')
+			.set('Protocol', 'https')
+			.expect(404)
 	})
 })

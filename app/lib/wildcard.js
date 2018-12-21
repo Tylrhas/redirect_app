@@ -1,58 +1,38 @@
-var models = require('../models')
-module.exports = {
-	getDestination
-}
-/**
- *
- *
- * @param {string} host
- * @param {string} path
- * @returns {undefined | {domain: string, redirects: [string]}}
- */
-async function getDestination(host, path) {
-	var wildcards = null
-	try {
-		// get all wildcards for this domain from database
-		wildcards = await getWildcards(host)
-	}
-	catch (err) {
-		console.log(err)
-	}
-	if (wildcards.length > 0) {
-		//look for a partial string match on the path
-		for (let i = 0; i < wildcards[0].redirects.length; i++) {
-			let redirect_path = wildcards[0].redirects[i].path
-			if (redirect_path.charAt(redirect_path.length - 1) !== '/') {
-				// add / to the end of the path so that dirs with a partial name match are not matched 
-				// eg. domain.com/wildcards != domain.com/wildcardsstuff
-				redirect_path = redirect_path + '/'
-			}
-			if (path.indexOf(redirect_path) >= 0) {
-				return {
-					domain: wildcards[0].domain,
-					redirects: [
-						wildcards[0].redirects[i].dataValues
-					]
-				}
-			}
-		}
-	}
-	return undefined
+const models = require('../models')
+
+let getDestination = async (host, path) => {
+  const [wildcard] = await getWildcards(host)
+  if (typeof wildcard == 'undefined') {
+    return
+  }
+
+  for (const redirect of wildcard.redirects) {
+    let redirectPath = redirect.path
+    if (redirectPath.split('').pop() !== '/') {
+      redirectPath += '/'
+    }
+    if (path.includes(redirectPath)) {
+      return {
+        domain: wildcard.domain,
+        redirects: [redirect.dataValues]
+      }
+    }
+  }
+  throw new Error('No matching redirect found')
 }
 
-function getWildcards(host) {
-	return models.domain.findAll({
-		where: {
-			domain: host
-		},
-		include: [
-			{
-				model: models.redirect,
-				where: {
-					wildcard: true
-				}
-			}
-		],
-		order: [['updatedAt', 'DESC']]
-	})
+const getWildcards = domain =>
+  models.domain.findAll({
+    where: { domain },
+    include: [
+      {
+        model: models.redirect,
+        where: { wildcard: true }
+      }
+    ],
+    order: [['updatedAt', 'DESC']]
+  })
+
+module.exports = {
+  getDestination
 }

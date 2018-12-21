@@ -1,6 +1,6 @@
 # Redirect App
 
-A node app that uses [greenlock](https://www.npmjs.com/package/greenlock-express) to repspond to both secure and non secure requests. 
+A node app that uses [greenlock](https://www.npmjs.com/package/greenlock-express) to respond to both secure and non secure requests. 
 
 Domains, Paths and Destnations are stored in a Postgres database. By default if a domain exists in the database but does not have any redirects associated with it the request will be forwarded to www
 

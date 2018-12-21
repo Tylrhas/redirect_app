@@ -3,7 +3,8 @@ module.exports = {
         "browser": true,
         "commonjs": true,
         "es6": true,
-        "jest": true
+        "jest": true,
+        "node": true
     },
     "extends": "eslint:recommended",
     "parserOptions": {
@@ -12,7 +13,7 @@ module.exports = {
     "rules": {
         "indent": [
             "error",
-            "tab"
+            "space"
         ],
         "linebreak-style": [
             "error",

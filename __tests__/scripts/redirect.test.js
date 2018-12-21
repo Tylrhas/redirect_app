@@ -1,79 +1,108 @@
-var redirect = require('../../app/lib/redirect')
-var multipleDesitnations = {
-	domain: 'forward.com', 
+const redirect = require('../../app/lib/redirect')
+
+const multipleDesitnations = {
+	domain: 'forward.com',
 	redirects: [
 		{
-			path: '/test/sub/dir', 
+			path: '/test/sub/dir',
 			destination: 'www.test.com/stuff',
-			secure_destination: true, 
+			secure_destination: true,
 			wildcard: false
 		},
 		{
-			path: '/test/sub/dir', 
+			path: '/test/sub/dir',
 			destination: 'www.test.com/stuff',
-			secure_destination: false, 
+			secure_destination: false,
 			wildcard: false
 		}
 	]
 }
-var secureDestination = {
-	domain: 'forward.com', 
+
+const secureDestination = {
+	domain: 'forward.com',
 	redirects: [
 		{
-			path: '/test/sub/dir', 
+			path: '/test/sub/dir',
 			destination: 'www.test.com/stuff',
 			wildcard: false
 		}
 	]
 }
-var forward = {
-	domain: 'forward.com', 
-	redirects: [
-	]
+
+const forward = {
+	domain: 'forward.com',
+	redirects: []
 }
+
 test('redirects are longer than one', () => {
-	let redirects = redirect.format(multipleDesitnations)
-	expect(redirects).toEqual({ error: 'more than one redirect for this domain and path' })
+	expect(() => {
+		redirect.format(multipleDesitnations.redirects)
+	}).toThrow(
+		new Error(
+			`Found an invalid number of redirects, count: ${
+				multipleDesitnations.redirects.length
+			}`
+		)
+	)
 })
 test('Secure and single desitnation', () => {
 	secureDestination.redirects[0].secure_destination = true
-	let redirects = redirect.format(secureDestination)
+	let redirects = redirect.format(secureDestination.redirects)
 	expect(redirects).toEqual({ destination: 'https://www.test.com/stuff' })
 })
+
 test('Non-Secure and single desitnation', () => {
 	secureDestination.redirects[0].secure_destination = false
-	let redirects = redirect.format(secureDestination)
+	let redirects = redirect.format(secureDestination.redirects)
 	expect(redirects).toEqual({ destination: 'http://www.test.com/stuff' })
 })
+
 test('No Redirects', () => {
-	let redirects = redirect.format(forward)
-	expect(redirects).toEqual({ error: 'There is no redirect for this domain' })
+	expect(() => {
+		redirect.format(forward.redirects)
+	}).toThrow(
+		`Found an invalid number of redirects, count: ${forward.redirects}`
+	)
 })
+
 test('http to https', async () => {
-	let redirects = await redirect.get('http://', 'nonsecure.com', '/secure')
-	expect(redirects).toEqual({destination: 'https://www.secure.com'})
+	let redirects = await redirect.get('nonsecure.com', '/secure')
+	expect(redirects).toEqual({ destination: 'https://www.secure.com' })
 })
+
 test('http to http', async () => {
-	let redirects = await redirect.get('http://', 'nonsecure.com', '/nonsecure')
-	expect(redirects).toEqual({destination: 'http://www.nonsecure.com'})
+	let redirects = await redirect.get('nonsecure.com', '/nonsecure')
+	expect(redirects).toEqual({ destination: 'http://www.nonsecure.com' })
 })
+
 test('https to http', async () => {
-	let redirects = await redirect.get('https://', 'secure.com', '/nonsecure')
-	expect(redirects).toEqual({destination: 'http://www.nonsecure.com'})
+	let redirects = await redirect.get('secure.com', '/nonsecure')
+	expect(redirects).toEqual({ destination: 'http://www.nonsecure.com' })
 })
+
 test('https to https', async () => {
-	let redirects = await redirect.get('https://', 'secure.com', '/secure')
-	expect(redirects).toEqual({destination: 'https://www.secure.com'})
+	let redirects = await redirect.get('secure.com', '/secure')
+	expect(redirects).toEqual({ destination: 'https://www.secure.com' })
 })
+
 test('Domain is in database more than once', async () => {
-	let redirects = await redirect.get('https://', 'domain.com', '/secure')
-	expect(redirects).toEqual({ error: 'multiple domains have been found' })
+	try {
+		await redirect.get('domain.com', '/secure')
+	} catch (e) {
+		expect(e).toEqual(new Error('multiple domains have been found'))
+	}
 })
+
 test('Wildcard', async () => {
-	let redirects = await redirect.get('https://', 'wildcard.com', '/wildcard/test/subdir')
-	expect(redirects).toEqual({ destination: 'https://www.wildcard.com/wildcard/subdir' })
+	let redirects = await redirect.get('wildcard.com', '/wildcard/test/subdir')
+	expect(redirects).toEqual({
+		destination: 'https://www.wildcard.com/wildcard/subdir'
+	})
 })
+
 test('forward', async () => {
-	let redirects = await redirect.get('https://', 'forward.com', '/forward/test/subdir')
-	expect(redirects).toEqual({ destination: 'http://www.forward.com/forward/test/subdir' })
+	let redirects = await redirect.get('forward.com', '/forward/test/subdir')
+	expect(redirects).toEqual({
+		destination: 'http://www.forward.com/forward/test/subdir'
+	})
 })
